@@ -136,6 +136,30 @@ details ul{font-size:10.5px;color:#68798c;line-height:1.65;padding-left:18px}
 .peek-hint{font-size:9.5px;color:#9aa8b8;padding:5px 11px;border-top:1px solid #eef2f6;background:#fff}
 @media(max-width:1160px){.layout{grid-template-columns:248px minmax(0,1fr)}.alleles{grid-template-columns:repeat(2,minmax(0,1fr))}.stats{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:820px){.layout{grid-template-columns:1fr}.sidebar{position:static;max-height:none}.pairgrid{grid-template-columns:1fr}}
+
+/* Segregation audit extensions: the original genotype/confidence palette is unchanged. */
+.badge.segreview{background:#f7e9ef;color:#8b496b;margin-top:5px}
+.badge.segshared{background:#e5f4ef;color:#1f796d;margin-top:5px}
+.badge.segprelim{background:#edf1f5;color:#62758c;margin-top:5px}
+.hm .seg-review,.hm .seg-shared{font-size:9px;font-weight:800;white-space:nowrap}
+.hm .seg-review{color:#99516b}.hm .seg-shared{color:#21796e}
+.audit-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.audit-actions select{width:auto;min-width:210px}
+.audit-summary{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.audit-pill{padding:7px 9px;border:1px solid #dfe7ef;background:#f8fafc;border-radius:9px;font-size:11px;color:#5c6f84}
+.audit-pill b{color:#1e3d5d;font-weight:800}
+.segaudit{width:100%;border-collapse:collapse;min-width:900px}
+.segaudit th{background:#f2f5f9;color:#71849a;font-size:10px;letter-spacing:.4px;text-transform:uppercase;padding:10px;text-align:left;white-space:nowrap}
+.segaudit td{border-top:1px solid #ecf0f5;padding:10px;font-size:11px;color:#37536c;vertical-align:top}
+.segaudit .status{font-weight:750;white-space:nowrap}
+.segaudit .status.review{color:#99516b}.segaudit .status.shared{color:#21796e}.segaudit .status.preliminary{color:#697c92}.segaudit .status.red{color:#ba424b}
+.segaudit details{border:0;margin:0;padding:0}
+.segaudit details summary{font-size:10px}
+.segaudit .minisheet{border-collapse:collapse;margin:7px 0;font-size:10px}
+.segaudit .minisheet th,.segaudit .minisheet td{padding:4px 6px;border:1px solid #e1e7ef;font-size:10px;text-transform:none;letter-spacing:0;white-space:nowrap}
+.segaudit .minisheet td{color:#3f5269}
+.segaudit .muted{font-size:10px;color:#8696a8;margin-top:4px}
+.segaudit .btn{font-size:10px;padding:5px 8px;white-space:nowrap}
 </style></head>
 <body>
 
@@ -186,9 +210,9 @@ details ul{font-size:10.5px;color:#68798c;line-height:1.65;padding-left:18px}
    <select id="matSelect" class="wide"><option value="all">Any / not typed</option><option value="a">MATa</option><option value="α">MATα</option><option value="">Untyped only</option></select>
    <div class="sidecap">Confidence &amp; exclusions</div>
    <label class="checkrow"><input type="checkbox" id="faint" checked><span>Include faint-band calls<span class="small">Bright-yellow cells that are actually visible in the sheet.</span></span></label>
-   <label class="checkrow"><input type="checkbox" id="exCalc"><span>Also drop computed non-2:2<span class="small">Tetrads whose ratios aren't 2:2 even without a red mark.</span></span></label>
+   <label class="checkrow"><input type="checkbox" id="exCalc"><span>Hide independent 2:2 review cases<span class="small">Unchecked by default. Shared HphMX patterns remain included.</span></span></label>
    <label class="checkrow"><input type="checkbox" id="cands"><span>Show spores awaiting PCR<span class="small">Compatible but not yet fully called.</span></span></label>
-   <div class="side-note">Only marks that are actually visible in Excel are counted — a fill sitting under a conditional-formatting rule is ignored. A red cell anywhere drops its whole tetrad — all four spores — from the results. Blank PCR calls are never assumed to be wild type. Dead spores (YPD ✗) are never counted as strains.</div>
+   <div class="side-note">Only marks that are actually visible in Excel are counted — a fill sitting under a conditional-formatting rule is ignored. Only a manually red-marked tetrad is excluded by default. Non-red 2:2 discrepancies are flagged but retained; expected shared-HphMX patterns are not treated as errors. Blank PCR calls are never assumed to be wild type. Dead spores (YPD ✗) are never counted as strains.</div>
   </aside>
 
   <main class="main">
@@ -200,7 +224,7 @@ details ul{font-size:10.5px;color:#68798c;line-height:1.65;padding-left:18px}
     <div class="matrixwrap"><table class="matrix" id="matrixTable">
       <thead><tr><th>SRS2 · RAD52 · RAD51 · REV1</th><th>RAD18 WT</th><th>RAD18 TS-AA</th><th>RAD18 TS-DD</th><th>rad18∆</th></tr></thead>
       <tbody id="matrixBody"></tbody></table></div>
-    <div class="footnote">Small amber number = how many of those spores carry a faint-band flag.</div>
+    <div class="footnote">Amber number = faint PCR band; <span style="color:#92536c;font-weight:750">◆</span> = independent 2:2 review; <span style="color:#21796e;font-weight:750">◉</span> = expected shared-HphMX pattern. These flags are independent of PCR confidence.</div>
    </section>
 
    <section class="panel pad" id="resultPanel">
@@ -222,9 +246,31 @@ details ul{font-size:10.5px;color:#68798c;line-height:1.65;padding-left:18px}
       <div class="tablewrap" id="candidateTable"></div>
     </div>
     <details><summary>Scoring rules and excluded tetrads</summary><ul id="auditList"></ul>
-      <p class="footnote">Bright yellow (#FFFF00) marks a low-confidence call from a light band; manual red (#EA9999, #E06666, #FF9999) marks non-Mendelian segregation and removes the entire tetrad. A fill only counts if Excel actually shows it: the workbook paints C–F green/pink by ✓/✗ and whole rows red when YPD is ✗, and in the rad18∆ cross it paints I–J by the Hyg call, so any manual fill underneath those rules is invisible and is ignored here. The pale green/pink and the pale cream (#FFF2CC) are template formatting, not confidence marks. In the rad18∆ cross HphMX is shared by REV1 and RAD18, so Hyg ✗ assigns wild type at both loci and Hyg ✓ requires both confirmation PCRs.</p>
+      <p class="footnote">Bright neon yellow (#FFFF00) marks a low-confidence PCR call from a faint band; manual red (#EA9999, #E06666, #FF9999) excludes the entire tetrad. A computed 2:2 exception is a separate review flag, not an automatic exclusion. A fill only counts if Excel actually shows it: the workbook paints C–F green/pink by ✓/✗ and whole rows red when YPD is ✗, and in the rad18∆ cross it paints I–J by the Hyg call, so any manual fill underneath those rules is invisible and is ignored here. The pale green/pink and the pale cream (#FFF2CC) are template formatting, not confidence marks. In the rad18∆ cross HphMX is shared by REV1 and RAD18, so Hyg ✗ assigns wild type at both loci and Hyg ✓ requires both confirmation PCRs.</p>
     </details>
    </section>
+
+    <section class="panel pad" id="segAudit">
+      <div class="section-head">
+        <div>
+          <h2>2:2 segregation audit</h2>
+          <p>Flags non-red tetrads with independent-locus discrepancies. Expected shared-HphMX patterns in the rad18∆ cross are kept distinct and remain searchable.</p>
+        </div>
+        <div class="audit-actions">
+          <select class="wide" id="segAuditSelect" aria-label="Segregation audit category">
+            <option value="all">All non-red flags</option>
+            <option value="review">Independent 2:2 review</option>
+            <option value="shared">Expected shared HphMX</option>
+            <option value="preliminary">Preliminary (PCR pending)</option>
+            <option value="red">Manually red / excluded</option>
+          </select>
+          <button class="btn" id="exportAudit">Export audit CSV</button>
+        </div>
+      </div>
+      <div class="audit-summary" id="segAuditSummary"></div>
+      <div class="tablewrap" id="segAuditTable"></div>
+      <p class="footnote">In the rad18∆ cross, both rev1∆ and rad18∆ carry HphMX. HygR therefore reports the union of both loci: 3:1 or 4:0 HygR can be consistent with 2:2 segregation at each deletion locus. Individual PCR assignments take precedence; incomplete PCR data are marked preliminary rather than assumed correct.</p>
+    </section>
   </main>
  </div>
 </div>
@@ -247,7 +293,7 @@ const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const byTid={}; RS.forEach(r=>{(byTid[r.tid]||=[]).push(r)});
 Object.values(byTid).forEach(a=>a.sort((x,y)=>x.spore.localeCompare(y.spore)));
 
-const state={q:[1,1,1,0],cross:'All',replicate:'All',mat:'all',faint:true,exCalc:false,cands:false,focus:null,pin:null};
+const state={q:[1,1,1,0],cross:'All',replicate:'All',mat:'all',faint:true,exCalc:false,cands:false,auditCategory:'all',focus:null,pin:null};
 D.crosses.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;$('crossSelect').appendChild(o)});
 
 const locusName=g=>g==='rev1'?'REV1':g.toUpperCase();
@@ -258,9 +304,46 @@ const nameMask=m=>GENES.filter((g,i)=>m&(1<<i)).map(delName).join(' · ')||'all 
 const bits=m=>GENES.reduce((n,g,i)=>n+((m>>i&1)),0);
 const tetOf=r=>TET[r.tid];
 
+// Segregation is audited separately from the visual PCR confidence and from manually red exclusion.
+// HygR is NOT a single 2:2 locus in the rad18∆ cross: REV1 and RAD18 deletions share HphMX.
+const SEG_NAME={G418:'SRS2 / G418R',Nat:'RAD51 / NatR',Hyg:'REV1 / HygR',MAT:'mating type',RAD52_PCR:'RAD52 PCR',REV1_PCR:'REV1 PCR',RAD18_PCR:'RAD18 PCR'};
+const AUDIT={};
+Object.values(TET).forEach(t=>{
+  const rows=byTid[t.id]||[];
+  const full=rows.length===4&&rows.every(r=>r.living&&r.complete);
+  const allViable=rows.length===4&&rows.every(r=>r.living);
+  const issues=[];
+  const shared=[];
+  const partial=[];
+  for(const [key,x] of Object.entries(t.seg)){
+    if(x.ok!==false)continue;
+    if(key==='Hyg'&&t.cross==='rad18Δ cross')continue;
+    const desc=`${SEG_NAME[key]||key}: ${x.r} (expected 2:2)`;
+    (full?issues:partial).push(desc);
+  }
+  if(t.cross==='rad18Δ cross' && t.seg.Hyg?.ok===false){
+    const hygRatio=t.seg.Hyg.r;
+    if(full){
+      const fits=rows.every(r=>(r.hyg==='✓')===(r.genes.rev1===1||r.rad18==='Δ'));
+      const loci22=t.seg.REV1_PCR?.ok===true&&t.seg.RAD18_PCR?.ok===true;
+      if(fits&&loci22)shared.push(`HygR ${hygRatio} is expected: REV1 and RAD18 each segregate 2:2 by PCR`);
+      else issues.push(fits?`HygR ${hygRatio}: PCR loci are not both 2:2`:`HygR ${hygRatio} disagrees with combined REV1/RAD18 PCR calls`);
+    }else if(allViable){
+      // HygR alone is not grounds to flag this as an independent segregation failure.
+      if(partial.length)partial.push(`HygR ${hygRatio} may reflect the shared HphMX marker; PCR validation pending`);
+    }
+  }
+  let category='normal';
+  if(t.has_red)category='red';
+  else if(issues.length)category='review';
+  else if(partial.length)category='preliminary';
+  else if(shared.length)category='shared';
+  const audit={category,issues,partial,shared,full,allViable};
+  AUDIT[t.id]=audit;t.audit=audit;
+});
 function tetExcluded(t){
-  if(t.has_red) return 'red mark';
-  if(state.exCalc && t.nonmendelian) return 'computed ≠ 2:2';
+  if(t.has_red)return 'manual red mark';
+  if(state.exCalc&&t.audit.category==='review')return 'independent-locus 2:2 review (optional filter)';
   return null;
 }
 const faint=r=>!state.faint&&r.yellow.length>0;
@@ -308,13 +391,17 @@ function sheetHtml(tid,spore){
   h+=`</table><div class="peek-foot">`;
   for(const [k,s] of Object.entries(t.seg)){
     if(s.r==='—')continue;
-    h+=`<span class="chip ${s.ok===false?'bad':(s.ok?'ok':'')}">${k.replace('_PCR',' PCR')} ${s.r}</span>`;
+    const expected=k==='Hyg'&&t.cross==='rad18Δ cross'&&t.audit.shared.length>0;
+    h+=`<span class="chip ${expected?'ok':(s.ok===false?'bad':(s.ok?'ok':''))}">${k.replace('_PCR',' PCR')} ${s.r}${expected?' (shared HphMX)':''}</span>`;
   }
   const ex=tetExcluded(t);
   if(t.has_red)h+=`<span class="chip bad">red → tetrad dropped</span>`;
   if(t.has_mauve)h+=`<span class="chip mau">mauve mark</span>`;
   if(rows.some(anyFaint))h+=`<span class="chip warn">faint bands</span>`;
   if(rows.some(r=>!r.living))h+=`<span class="chip">${rows.filter(r=>!r.living).length} dead</span>`;
+  if(t.audit.category==='review')h+=`<span class="chip mau">2:2 PCR/selection review</span>`;
+  if(t.audit.category==='shared')h+=`<span class="chip ok">expected shared HphMX; retained</span>`;
+  if(t.audit.category==='preliminary')h+=`<span class="chip">preliminary segregation flag</span>`;
   if(ex)h+=`<span class="chip bad">excluded: ${ex}</span>`;
   h+=`</div><div class="peek-hint">✓ growth · ✗ no growth · outline = manual mark visible in the sheet${state.pin===tid?' · click again to unpin':''}</div></div>`;
   return h;
@@ -358,9 +445,11 @@ function matrixRender(base){
   $('matrixBody').innerHTML=ids.map((m,i)=>`<tr class="${m===active?'active':''}">
     <td><button class="row-choice" data-mask="${m}"><span class="num">${String(i+1).padStart(2,'0')}</span><span>${esc(nameMask(m))}</span></button></td>`+
     ALLELES.map(a=>{const v=map[m][a],n=v.length,low=v.filter(anyFaint).length;
+      const review=v.filter(r=>tetOf(r).audit.category==='review').length;
+      const shared=v.filter(r=>tetOf(r).audit.category==='shared').length;
       return `<td><button class="hm ${!n?'':(n-low?'has':'onlytent')}" data-mask="${m}" data-allele="${a}"
-        title="${esc(nameMask(m))} / ${alleleLabel(a)}: ${n} spore(s)${low?', '+low+' faint-flagged':''}">
-        <span>${n||'—'}</span>${low?`<small>${low} ⚑</small>`:''}</button></td>`}).join('')+`</tr>`).join('');
+        title="${esc(nameMask(m))} / ${alleleLabel(a)}: ${n} spore(s); ${low} faint PCR; ${review} review; ${shared} expected HphMX">
+        <span>${n||'—'}</span>${low?`<small>${low} ⚑</small>`:''}${review?`<span class="seg-review">◆${review}</span>`:''}${shared?`<span class="seg-shared">◉${shared}</span>`:''}</button></td>`}).join('')+`</tr>`).join('');
   $('matrixBody').querySelectorAll('button[data-mask]').forEach(b=>b.addEventListener('click',()=>{
     const m=+b.dataset.mask; state.q=GENES.map((g,i)=>(m>>i&1)); state.focus=b.dataset.allele||null;
     state.pin=null;$('peek').classList.remove('pinned','show');
@@ -375,8 +464,12 @@ function matrixRender(base){
 /* ---------- results ---------- */
 const order=(a,b)=>ALLELES.indexOf(a.rad18)-ALLELES.indexOf(b.rad18)||D.crosses.indexOf(a.cross)-D.crosses.indexOf(b.cross)||a.replicate-b.replicate||a.tetrad-b.tetrad||a.spore.localeCompare(b.spore);
 function badge(r,cand){
-  if(cand)return '<span class="badge wait">PCR incomplete</span>';
-  return anyFaint(r)?'<span class="badge low">faint band · lower confidence</span>':'<span class="badge">higher confidence</span>';
+  const conf=cand?'<span class="badge wait">PCR incomplete</span>':(anyFaint(r)?'<span class="badge low">faint band · lower confidence</span>':'<span class="badge">higher confidence</span>');
+  const a=tetOf(r).audit;
+  const seg=a.category==='review'?'<span class="badge segreview">◆ 2:2 review</span>':
+    a.category==='shared'?'<span class="badge segshared">◉ shared HphMX expected</span>':
+    a.category==='preliminary'?'<span class="badge segprelim">PCR-pending segregation review</span>':'';
+  return conf+(seg?'<div style="margin-top:4px">'+seg+'</div>':'');
 }
 function rowHtml(r,cand){
   const geno=GENES.map(g=>r.genes[g]===1?delName(g):r.genes[g]===0?locusName(g):locusName(g)+'?').join(' · ');
@@ -442,11 +535,11 @@ function render(){geneControls();const base=RS.filter(eligible);matrixRender(bas
 /* ---------- CSV ---------- */
 function csv(rows,name){
   const head=['cross','source_file','sheet','replicate','tetrad','spore','excel_row','MAT','SRS2','RAD52','RAD51','REV1','RAD18_allele',
-              'confidence','faint_cells','red_cells','mauve_cells','tetrad_excluded','YPD','G418','Nat','Hyg','RAD52_PCR','REV1_PCR','RAD18_PCR','full_genotype'];
+              'confidence','faint_cells','red_cells','mauve_cells','tetrad_excluded','segregation_class','independent_issues','expected_shared_HphMX','preliminary_issues','YPD','G418','Nat','Hyg','RAD52_PCR','REV1_PCR','RAD18_PCR','full_genotype'];
   const v=r=>[r.cross,r.file,r.sheet,r.replicate,r.tetrad,r.spore,r.row,r.mat||'',
     ...GENES.map(g=>r.genes[g]===null?'UNKNOWN':r.genes[g]?'DEL':'WT'),r.rad18||'UNKNOWN',
     anyFaint(r)?'faint band':'normal',r.yellowCells.join(' '),r.redCells.join(' '),r.mauveCells.join(' '),
-    tetExcluded(tetOf(r))||'',r.ypd,r.g418,r.nat,r.hyg,r.rad52PCR,r.rev1PCR,r.rad18PCR,r.genotype];
+    tetExcluded(tetOf(r))||'',tetOf(r).audit.category,tetOf(r).audit.issues.join('; '),tetOf(r).audit.shared.join('; '),tetOf(r).audit.partial.join('; '),r.ypd,r.g418,r.nat,r.hyg,r.rad52PCR,r.rev1PCR,r.rad18PCR,r.genotype];
   const e=x=>'"'+String(x??'').replace(/"/g,'""')+'"';
   const body='\ufeff'+[head,...rows.map(v)].map(r=>r.map(e).join(',')).join('\r\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([body],{type:'text/csv;charset=utf-8'}));
@@ -454,13 +547,53 @@ function csv(rows,name){
 }
 $('exportCurrent').onclick=()=>csv(RS.filter(eligible).filter(qMatch).filter(r=>!state.focus||r.rad18===state.focus).sort(order),'tetrad_matches.csv');
 $('exportAll').onclick=()=>csv(RS.slice().sort(order),'tetrad_all_scored_spores.csv');
-$('crossSelect').onchange=e=>{state.cross=e.target.value;state.focus=null;render()};
-$('replicateSelect').onchange=e=>{state.replicate=e.target.value;state.focus=null;render()};
+$('crossSelect').onchange=e=>{state.cross=e.target.value;state.focus=null;render();renderSegAudit()};
+$('replicateSelect').onchange=e=>{state.replicate=e.target.value;state.focus=null;render();renderSegAudit()};
 $('matSelect').onchange=e=>{state.mat=e.target.value;render()};
 ['faint','exCalc','cands'].forEach(id=>$(id).onchange=e=>{state[id]=e.target.checked;render()});
 $('presets').querySelectorAll('button[data-q]').forEach(b=>b.onclick=()=>{
   state.q=b.dataset.q.split(',').map(Number);state.focus=null;render()});
-renderAudit();render();
+
+/* ---------- independent 2:2 and shared-HphMX audit ---------- */
+const auditCategories=['review','shared','preliminary'];
+const auditLabel={review:'Independent-locus 2:2 review',shared:'Expected shared HphMX',preliminary:'Preliminary; PCR pending',red:'Manual red; excluded'};
+function segregationAuditRows(){
+  return Object.values(TET).filter(t=>{
+    if(state.auditCategory==='all'&&!auditCategories.includes(t.audit.category))return false;
+    if(state.auditCategory!=='all'&&t.audit.category!==state.auditCategory)return false;
+    if(state.cross!=='All'&&t.cross!==state.cross)return false;
+    if(state.replicate!=='All'&&!t.sheet.startsWith('Replicate_'+state.replicate))return false;
+    return true;
+  }).sort((a,b)=>D.crosses.indexOf(a.cross)-D.crosses.indexOf(b.cross)||parseInt(a.sheet.match(/Replicate_(\d+)/)?.[1]||0)-parseInt(b.sheet.match(/Replicate_(\d+)/)?.[1]||0)||a.tetrad-b.tetrad);
+}
+function renderSegAudit(){
+  const tets=segregationAuditRows();
+  const counts=Object.fromEntries(['review','shared','preliminary','red'].map(k=>[k,Object.values(TET).filter(t=>t.audit.category===k&&(state.cross==='All'||t.cross===state.cross)&&(state.replicate==='All'||t.sheet.startsWith('Replicate_'+state.replicate))).length]));
+  $('segAuditSummary').innerHTML=`<span class="audit-pill"><b>${counts.review}</b> independent review</span><span class="audit-pill"><b>${counts.shared}</b> verified shared-HphMX</span><span class="audit-pill"><b>${counts.preliminary}</b> preliminary exceptions</span><span class="audit-pill"><b>${counts.red}</b> red excluded</span>`;
+  if(!tets.length){$('segAuditTable').innerHTML='<div class="zero">No tetrads in this category for the selected cross and replicate.</div>';return;}
+  let html='<table class="segaudit"><thead><tr><th>Origin</th><th>Status</th><th>Observed pattern</th><th>Spore-level PCR / selection</th><th>Sheet</th></tr></thead><tbody>';
+  for(const t of tets){
+    const a=t.audit,rows=byTid[t.id]||[];
+    const info=(a.issues.length?a.issues:a.partial.length?a.partial:a.shared.length?a.shared:[t.has_red?'Manually marked red; tetrad excluded':'—']).map(x=>esc(x)).join('; ');
+    const sc=Object.entries(t.seg).filter(([,v])=>v.r!=='—').map(([k,v])=>`${k.replace('_PCR',' PCR')} ${v.r}`).join(' · ');
+    const spores='<table class="minisheet"><thead><tr><th>Spore</th><th>MAT</th><th>G418</th><th>Nat</th><th>Hyg</th><th>RAD52 PCR</th><th>REV1 PCR</th><th>RAD18 PCR</th></tr></thead><tbody>'+rows.map(r=>`<tr><td><b>${esc(t.tetrad+r.spore)}</b></td><td>${esc(r.mat||'—')}</td><td>${esc(r.g418||'—')}</td><td>${esc(r.nat||'—')}</td><td>${esc(r.hyg||'—')}</td><td>${esc(r.rad52PCR||'—')}</td><td>${esc(r.rev1PCR||'—')}</td><td>${esc(r.rad18PCR||'—')}</td></tr>`).join('')+'</tbody></table>';
+    html+=`<tr><td><strong>${esc(t.cross)}</strong><div class="muted">${esc(t.sheet.replace('Replicate_','Rep '))} · tetrad ${t.tetrad}</div></td><td class="status ${a.category}">${esc(auditLabel[a.category])}${!a.full&&a.category!=='red'?'<div class="muted">Incomplete PCR genotyping</div>':''}</td><td>${info}<div class="muted">${esc(sc)}</div></td><td><details><summary>View spores a–d</summary>${spores}</details></td><td><button class="btn" data-tid="${esc(t.id)}" data-spore="a">Preview sheet</button></td></tr>`;
+  }
+  html+='</tbody></table>';
+  $('segAuditTable').innerHTML=html;
+  wirePeek($('segAuditTable'));
+}
+function exportSegAudit(){
+  const header=['cross','replicate','sheet','tetrad','audit_status','all_four_live_and_fully_typed','independent_locus_issues','expected_shared_HphMX','preliminary_issues','G418_ratio','Nat_ratio','Hyg_ratio','MAT_ratio','RAD52_PCR_ratio','REV1_PCR_ratio','RAD18_PCR_ratio','manual_red_excluded'];
+  const vals=t=>[t.cross,Number(t.sheet.match(/Replicate_(\d+)/)?.[1]||0),t.sheet,t.tetrad,t.audit.category,t.audit.full,t.audit.issues.join('; '),t.audit.shared.join('; '),t.audit.partial.join('; '),...['G418','Nat','Hyg','MAT','RAD52_PCR','REV1_PCR','RAD18_PCR'].map(k=>t.seg[k]?.r||''),t.has_red];
+  const e=x=>'"'+String(x??'').replace(/"/g,'""')+'"';
+  const content='\ufeff'+[header,...segregationAuditRows().map(vals)].map(row=>row.map(e).join(',')).join('\r\n');
+  const a=document.createElement('a'),url=URL.createObjectURL(new Blob([content],{type:'text/csv;charset=utf-8'}));a.href=url;a.download='tetrad_segregation_audit.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+$('segAuditSelect').onchange=e=>{state.auditCategory=e.target.value;renderSegAudit()};
+$('exportAudit').onclick=exportSegAudit;
+
+renderAudit();render();renderSegAudit();
 
 </script>
 </body></html>
